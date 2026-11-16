@@ -1,0 +1,1139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pipeline Point Sorter</title>
+<style>
+:root{--bg:#eef3f9;--card:#fff;--ink:#12203a;--mut:#5a6b85;--line:#dbe4f0;--acc:#0e7c86;--acc2:#2563eb;--accink:#fff;--warn:#c2410c;--ok:#15803d;--tint:rgba(14,124,134,.07);--shadow:0 8px 24px rgba(20,40,80,.08);--hero1:#0b2545;--hero2:#0e7c86;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0a1220;--card:#121d30;--ink:#e8eef8;--mut:#93a4bd;--line:#243650;--acc:#2dd4bf;--acc2:#60a5fa;--accink:#04222a;--warn:#fb923c;--ok:#4ade80;--tint:rgba(45,212,191,.08);--shadow:0 8px 28px rgba(0,0,0,.45);--hero1:#0b2545;--hero2:#0f766e}}
+:root[data-theme="dark"]{--bg:#0a1220;--card:#121d30;--ink:#e8eef8;--mut:#93a4bd;--line:#243650;--acc:#2dd4bf;--acc2:#60a5fa;--accink:#04222a;--warn:#fb923c;--ok:#4ade80;--tint:rgba(45,212,191,.08);--shadow:0 8px 28px rgba(0,0,0,.45);--hero1:#0b2545;--hero2:#0f766e}
+*{box-sizing:border-box}html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;color:var(--ink);font:15px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:radial-gradient(900px 400px at 85% -5%,var(--tint),transparent 70%),var(--bg);min-height:100vh}
+main{max-width:1000px;margin:0 auto;padding:20px 16px 48px}
+.hero{display:flex;flex-wrap:wrap;gap:18px;align-items:center;padding:24px 26px;margin-bottom:20px;border-radius:20px;color:#fff;background:linear-gradient(120deg,var(--hero1),var(--hero2));box-shadow:var(--shadow);position:relative}
+.hero::after{content:"";position:absolute;right:0;top:0;width:170px;height:170px;border-radius:0 20px 0 100%;background:rgba(255,255,255,.07);pointer-events:none}
+.logo{flex:none;width:64px;height:64px;border-radius:16px;display:grid;place-items:center;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.25)}
+h1{font-size:26px;line-height:1.2;margin:0 0 4px;letter-spacing:-.01em}
+p.sub{margin:0;color:rgba(255,255,255,.82);max-width:62ch}
+.card{background:var(--card);border:1px solid var(--line);border-top:3px solid var(--acc);border-radius:16px;padding:18px;margin-bottom:16px;box-shadow:var(--shadow)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
+label{display:block;font-size:13px;font-weight:650;margin-bottom:6px;color:var(--ink)}
+.step{display:inline-grid;place-items:center;width:22px;height:22px;margin-right:8px;border-radius:50%;font-size:12px;color:var(--accink);background:linear-gradient(135deg,var(--acc),var(--acc2))}
+input[type=file],select,input[type=number],input[type=password],input:not([type]),textarea{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);font:inherit;transition:border-color .15s,box-shadow .15s}
+input[type=file]{border:2px dashed color-mix(in srgb,var(--acc) 55%,var(--line));background:var(--tint);cursor:pointer}
+input[type=file]::file-selector-button{margin-right:12px;padding:7px 14px;border:0;border-radius:8px;font:inherit;font-weight:600;cursor:pointer;color:var(--accink);background:linear-gradient(135deg,var(--acc),var(--acc2))}
+input[type=checkbox]{accent-color:var(--acc);width:16px;height:16px;vertical-align:-3px;margin-right:6px}
+:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+select:focus,input:focus,textarea:focus{border-color:var(--acc);box-shadow:0 0 0 3px var(--tint)}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:12px}
+.small{font-size:13px;color:var(--mut)}
+.msg{font-size:13px;margin-top:10px;padding:8px 12px;border-radius:10px;background:var(--bg);border-left:3px solid var(--line)}
+.msg.ok{border-left-color:var(--ok)}.msg.err{border-left-color:var(--warn)}
+.err{color:var(--warn)}.ok{color:var(--ok)}
+button{background:linear-gradient(135deg,var(--acc),var(--acc2));color:var(--accink);border:0;border-radius:10px;padding:10px 16px;font:inherit;font-weight:650;cursor:pointer;box-shadow:0 2px 8px rgba(37,99,235,.25);transition:transform .12s,box-shadow .12s,border-color .12s}
+button:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(37,99,235,.28)}
+button:active{transform:translateY(0)}
+button.sec{background:var(--card);color:var(--ink);border:1px solid var(--line);box-shadow:none}
+button.sec:hover{border-color:var(--acc);box-shadow:0 4px 12px rgba(20,40,80,.1)}
+button:disabled{opacity:.45;cursor:not-allowed}
+canvas{width:100%;height:340px;display:block;border:1px solid var(--line);border-radius:12px;background-color:var(--bg);background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);background-size:32px 32px}
+.tw{overflow-x:auto;max-height:360px;overflow-y:auto;border:1px solid var(--line);border-radius:12px}
+table{border-collapse:collapse;width:100%;font-size:13px;font-variant-numeric:tabular-nums}
+th,td{padding:8px 12px;text-align:left;white-space:nowrap;border-bottom:1px solid var(--line)}
+th{position:sticky;top:0;background:var(--card);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--mut);box-shadow:0 1px 0 var(--line)}
+tbody tr:nth-child(even) td{background:var(--tint)}
+tbody tr:hover td{background:color-mix(in srgb,var(--acc) 14%,transparent)}
+footer{text-align:center;margin-top:22px;font-size:12px;color:var(--mut)}
+#gate{display:none;position:fixed;inset:0;z-index:50;place-items:center;padding:16px;background:linear-gradient(120deg,var(--hero1),var(--hero2));overflow:auto}
+.locked #gate,.gate-open #gate{display:grid}.locked main{display:none}
+.gcard{width:min(400px,100%);background:var(--card);border-radius:20px;padding:26px;box-shadow:0 20px 60px rgba(0,0,0,.35);display:grid;gap:8px}
+.gcard h2{margin:0;font-size:22px}.gcard p{margin:0 0 6px}
+.glogo{background:linear-gradient(135deg,var(--hero1),var(--hero2));margin-bottom:4px;display:grid;place-items:center;width:56px;height:56px;border-radius:14px}
+input[readonly]{opacity:.85;font-weight:700;letter-spacing:.04em}
+.who{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;align-items:center;position:relative;z-index:1}
+.badge{display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.16);color:#fff;border:1px solid rgba(255,255,255,.3);padding:6px 12px 6px 6px;border-radius:999px;font-weight:700;font-size:13px;box-shadow:none;cursor:pointer}
+.badge:hover{transform:none;box-shadow:none;background:rgba(255,255,255,.26)}
+.badge small{opacity:.8;font-weight:500}.badge .car{font-size:11px;opacity:.85}
+.av{display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:#fff;color:var(--hero1);font-size:13px}
+.menu{position:absolute;right:0;top:calc(100% + 8px);min-width:200px;padding:6px;background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:0 14px 40px rgba(0,0,0,.28);z-index:5}
+.menu .mi{display:block;width:100%;text-align:left;background:transparent;color:var(--ink);box-shadow:none;border-radius:9px;padding:10px 12px;font-weight:600}
+.menu .mi:hover{background:var(--tint);transform:none;box-shadow:none}
+.who button.sec{padding:7px 12px;font-size:13px}
+.mapwrap{position:relative}
+.mtools{position:absolute;top:10px;right:10px;display:flex;flex-direction:column;gap:6px}
+.mtools button{width:36px;height:36px;padding:0;font-size:18px;line-height:1;border-radius:10px;background:var(--card);color:var(--ink);border:1px solid var(--line);box-shadow:0 4px 12px rgba(0,0,0,.25)}
+.mtools button:hover{border-color:var(--acc);transform:none}
+#cv{height:460px;cursor:grab;touch-action:none}#cv:active{cursor:grabbing}
+tbody tr{cursor:pointer}
+tbody tr.sel td{background:color-mix(in srgb,#f43f5e 28%,transparent)!important;font-weight:700}
+#cv.pick{cursor:crosshair}
+.mtools button.on{background:linear-gradient(135deg,var(--acc),var(--acc2));color:var(--accink);border-color:transparent}
+.cellEdit{min-width:160px;padding:4px 8px;border:1px solid var(--acc);border-radius:6px;background:var(--bg);color:var(--ink);font:inherit;outline:none;box-shadow:0 0 0 3px var(--tint)}
+.hide{display:none}
+@media (max-width:560px){.hero{flex-direction:column;align-items:flex-start;padding:20px}h1{font-size:22px}}
+</style>
+</head>
+<body class="locked">
+<div id="gate" role="dialog" aria-modal="true" aria-labelledby="gTitle">
+ <div id="gForm" class="gcard" role="group" aria-labelledby="gTitle">
+  <div class="glogo"><svg viewBox="0 0 48 48" width="34" height="34" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 10 L24 22 L18 30 L32 38 L42 40"/><circle cx="6" cy="10" r="3.5" fill="#fff"/><circle cx="42" cy="40" r="3.5" fill="#fff"/></svg></div>
+  <h2 id="gTitle">Admin login</h2>
+  <p id="gSub" class="small">Sign in to use the Pipeline Point Sorter.</p>
+  <label for="gUser">Admin name</label><input id="gUser" value="ISTIYAQUE" autocomplete="username" readonly>
+  <label for="g0" id="l0">Password</label><input id="g0" type="password" autocomplete="current-password">
+  <div id="w1" class="hide"><label for="g1">New password</label><input id="g1" type="password" autocomplete="new-password"></div>
+  <div id="w2" class="hide"><label for="g2">Confirm password</label><input id="g2" type="password" autocomplete="new-password"></div>
+  <div id="gMsg" class="msg err hide"></div>
+  <div class="row"><button type="button" id="gGo">Sign in</button><button type="button" id="gCancel" class="sec hide">Cancel</button></div>
+ </div>
+</div>
+<main>
+<header class="hero"><div class="logo"><svg viewBox="0 0 48 48" width="40" height="40" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 10 L24 22 L18 30 L32 38 L42 40"/><circle cx="6" cy="10" r="3.5" fill="#fff"/><circle cx="42" cy="40" r="3.5" fill="#fff"/></svg></div><div><h1>Pipeline Point Sorter</h1><p class="sub">Load a pipeline DXF and a Points.csv. Points are re-ordered along the pipeline’s drawn direction (first vertex → last vertex). Everything runs in your browser.</p></div><div id="who" class="who hide"><button id="whoBtn" class="badge" type="button" aria-haspopup="menu" aria-expanded="false"><span class="av">I</span>ISTIYAQUE<small>Admin</small><span class="car">▾</span></button><div id="menu" class="menu hide" role="menu"><button id="chg" class="mi" type="button" role="menuitem">Change password</button><button id="out" class="mi" type="button" role="menuitem">Log out</button></div></div></header>
+
+<div class="card grid">
+ <div><label for="dxf"><span class="step">1</span>Pipeline DXF</label><input id="dxf" type="file" accept=".dxf"><div id="dxfMsg" class="msg small">Supports LWPOLYLINE, POLYLINE and LINE entities. Arc bulges are treated as straight chords.</div></div>
+ <div><label for="csv"><span class="step">2</span>Points CSV</label><input id="csv" type="file" accept=".csv,.txt"><div id="csvMsg" class="msg small">Needs Easting and Northing columns; Elevation is carried along.</div></div>
+</div>
+
+<div class="card">
+ <label for="ovr"><span class="step">3</span>Overview DXF <span class="small">(optional)</span></label>
+ <input id="ovr" type="file" accept=".dxf">
+ <div id="ovrMsg" class="msg small">Polylines from this file are drawn behind the route on the map, in their original DXF colours.</div>
+ <div class="row"><label style="margin:0"><input type="checkbox" id="ovrOn" checked> Show overview on map</label><button id="ovrClear" type="button" class="sec hide">Remove overview</button></div>
+</div>
+
+<div id="opts" class="card hide">
+ <div class="grid">
+  <div><label for="ent">Pipeline entity</label><select id="ent"></select></div>
+  <div><label for="cE">Easting column</label><select id="cE"></select></div>
+  <div><label for="cN">Northing column</label><select id="cN"></select></div>
+  <div><label for="cZ">Elevation column</label><select id="cZ"></select></div>
+ </div>
+ <div class="row">
+  <label style="margin:0"><input type="checkbox" id="rev"> Reverse direction</label>
+  <label style="margin:0"><input type="checkbox" id="all" checked> Keep all original columns</label>
+  <label style="margin:0"><input type="checkbox" id="useZ" checked> Shapefile: store elevation as Z (PointZ)</label>
+  <label style="margin:0">Chainage format <select id="chFmt" style="width:auto;display:inline-block"><option value="km">0+000.00</option><option value="m">0.000 (metres)</option></select></label>
+ </div>
+ <div class="grid" style="margin-top:12px">
+  <div><label for="crs">Shapefile coordinate system (.prj)</label><select id="crs"><option value="">None (no .prj file)</option><option value="39">WGS 84 / UTM zone 39N</option><option value="40">WGS 84 / UTM zone 40N</option><option value="41">WGS 84 / UTM zone 41N</option><option value="custom">Custom WKT…</option></select></div>
+  <div id="wktBox" class="hide"><label for="wkt">Custom WKT (ESRI)</label><textarea id="wkt" rows="3" style="width:100%;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:12px monospace"></textarea></div>
+ </div>
+</div>
+
+<div id="pts" class="card hide">
+ <label style="font-size:15px">Route points along the pipeline</label>
+ <p class="small" style="margin:0 0 10px">Creates points at a fixed spacing, counting from the start of the pipeline in the current direction. Reversing the direction recalculates every point from the other end. This only needs the DXF.</p>
+ <div class="row" style="margin-top:0">
+  <label style="margin:0" for="step">Interval (m)</label><input id="step" type="number" value="5" min="0.001" step="any" style="width:110px;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit">
+  <label style="margin:0"><input type="checkbox" id="endPt" checked> Add a point at the pipeline end</label>
+  <button id="rpRev" class="sec">⇄ Reverse polyline direction</button>
+ </div>
+ <canvas id="cv2" width="900" height="300" style="margin-top:12px;height:300px"></canvas>
+ <div id="ptSum" class="msg"></div>
+ <div class="row"><button id="rpCsv">Download route points CSV</button><button id="rpShp" class="sec">Download route points Shapefile (.zip)</button><button id="rpMerge" class="sec">Merge into Points</button><span id="rpMsg" class="small"></span></div>
+ <div class="tw" style="margin-top:12px"><table id="rpTb"></table></div>
+</div>
+
+<div id="res" class="card hide">
+ <div class="row" style="margin:0 0 10px"><button id="revBtn" class="sec">⇄ Reverse polyline direction</button><span id="dirTxt" class="small"></span></div>
+ <div class="mapwrap"><canvas id="cv" class="pick" width="900" height="460"></canvas><div class="mtools"><button type="button" id="zIn" title="Zoom in" aria-label="Zoom in">+</button><button type="button" id="zOut" title="Zoom out" aria-label="Zoom out">−</button><button type="button" id="zFit" title="Reset view" aria-label="Reset view">⤢</button><button type="button" id="zSel" title="Zoom to selected point" aria-label="Zoom to selected point">◎</button><button type="button" id="zOvr" class="hide" title="Fit overview" aria-label="Fit overview">▦</button><button type="button" id="zPick" class="on" title="Select tool: click a point to show its table row" aria-label="Select tool"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M5 3l14 8-6.5 1.8L10 19z"/></svg></button><button type="button" id="zAdd" title="Add point tool: click the map to add a New Point" aria-label="Add point"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-6-5.2-6-10a6 6 0 0 1 12 0c0 4.8-6 10-6 10z"/><path d="M12 8.5v5M9.5 11h5"/></svg></button><button type="button" id="zSnap" class="on" title="Snap tool (F3): endpoint, intersection, midpoint, node, nearest" aria-label="Snap tool"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M6 3v8a6 6 0 0 0 12 0V3h-4v8a2 2 0 0 1-4 0V3z"/></svg></button></div></div>
+ <div id="selInfo" class="msg small">Click a table row or a point on the map to highlight it. Scroll to zoom, drag to pan. Double-click a Point iD cell to rename it.</div>
+ <div id="addBar" class="row hide" style="margin:0 0 8px"><span id="addTxt" class="small"></span><button id="addUndo" type="button" class="sec">Undo last point</button><button id="addClear" type="button" class="sec">Remove all new points</button></div>
+ <div id="snapBar" class="row hide" style="margin:0 0 8px"><span class="small">Snap to:</span><label style="margin:0"><input type="checkbox" id="snEnd" checked> Endpoint</label><label style="margin:0"><input type="checkbox" id="snInt" checked> Intersection</label><label style="margin:0"><input type="checkbox" id="snMid" checked> Midpoint</label><label style="margin:0"><input type="checkbox" id="snNode" checked> Node</label><label style="margin:0"><input type="checkbox" id="snNear"> Nearest</label><span class="small">(F3 toggles snap)</span></div>
+ <div id="sum" class="msg"></div>
+ <div class="row"><button id="dl">Download sorted CSV</button><button id="shp" class="sec">Download Shapefile (.zip)</button><button id="cp" class="sec">Copy CSV</button><button id="kmBtn" class="sec">Add KM points (every 1000 m)</button><button id="intBtn" class="sec">Add Intersection Points</button><button id="intDxf" class="sec hide">Intersection points DXF (.zip)</button><span id="dlMsg" class="small"></span></div>
+ <div class="tw" style="margin-top:12px"><table id="tb"></table></div>
+</div>
+<footer>Runs entirely in your browser – your files are never uploaded.</footer>
+</main>
+
+<script>
+/* ---------- Standalone download helper ---------- */
+async function getDownloads(){
+  return {save:async({filename,data})=>{
+    const b=data instanceof Blob?data:new Blob([data],{type:'text/plain;charset=utf-8'});
+    const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=filename;
+    document.body.appendChild(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+  }};
+}
+const $=id=>document.getElementById(id);
+let ents=[],rows=[],hdr=[],out=null;
+
+/* ---------- Admin login ---------- */
+const ADMIN='ISTIYAQUE',AKEY='pps_admin_v1',SKEY='pps_session_v1';
+let gMode='login',fails=0,lockUntil=0,memAcct=null;
+const lsGet=()=>{try{return JSON.parse(localStorage.getItem(AKEY)||'null')}catch(e){return null}};
+const lsSet=v=>{try{localStorage.setItem(AKEY,JSON.stringify(v));return true}catch(e){return false}};
+const getAcct=()=>lsGet()||memAcct;
+const sessGet=()=>{try{return sessionStorage.getItem(SKEY)==='1'}catch(e){return false}};
+const sessSet=v=>{try{v?sessionStorage.setItem(SKEY,'1'):sessionStorage.removeItem(SKEY)}catch(e){}};
+const rnd=()=>Array.from(crypto.getRandomValues(new Uint8Array(12)),b=>b.toString(16).padStart(2,'0')).join('');
+async function hashPw(pw,salt){
+  const data=new TextEncoder().encode(salt+':'+pw);
+  if(window.crypto&&crypto.subtle){const h=await crypto.subtle.digest('SHA-256',data);return 'a'+Array.from(new Uint8Array(h),b=>b.toString(16).padStart(2,'0')).join('')}
+  let h1=0xdeadbeef,h2=0x41c6ce57;
+  for(const b of data){h1=Math.imul(h1^b,2654435761);h2=Math.imul(h2^b,1597334677)}
+  h1=Math.imul(h1^(h1>>>16),2246822507)^Math.imul(h2^(h2>>>13),3266489909);
+  h2=Math.imul(h2^(h2>>>16),2246822507)^Math.imul(h1^(h1>>>13),3266489909);
+  return 'b'+(4294967296*(2097151&h2)+(h1>>>0)).toString(16);
+}
+function gmsg(t){const m=$('gMsg');m.textContent=t||'';m.classList.toggle('hide',!t)}
+function setMode(mode){
+  gMode=mode;const setup=mode==='setup',chg=mode==='change';
+  $('gTitle').textContent=setup?'Set admin password':chg?'Change password':'Admin login';
+  $('gSub').textContent=setup?'First use: choose a password for '+ADMIN+'. You will use it to sign in.':chg?'Enter your current password, then a new one.':'Sign in to use the Pipeline Point Sorter.';
+  $('l0').textContent=setup?'New password':chg?'Current password':'Password';
+  $('g0').autocomplete=setup?'new-password':'current-password';
+  $('w1').classList.toggle('hide',!chg);$('w2').classList.toggle('hide',!(setup||chg));
+  $('gGo').textContent=setup?'Save and sign in':chg?'Update password':'Sign in';
+  $('gCancel').classList.toggle('hide',!chg);
+  ['g0','g1','g2'].forEach(i=>$(i).value='');gmsg('');
+}
+function openGate(mode){
+  setMode(mode);document.body.classList.add('gate-open');
+  if(mode!=='change'){document.body.classList.add('locked');$('who').classList.add('hide')}
+  setTimeout(()=>$('g0').focus(),50);
+}
+function closeGate(){document.body.classList.remove('gate-open')}
+function unlock(){document.body.classList.remove('locked','gate-open');$('who').classList.remove('hide');sessSet(true)}
+function lock(){sessSet(false);openGate(getAcct()?'login':'setup')}
+async function saveNew(pw){const salt=rnd(),a={u:ADMIN,salt,hash:await hashPw(pw,salt)};if(!lsSet(a))memAcct=a}
+const gSubmit=async()=>{
+  const p0=$('g0').value;
+  try{
+    if(gMode==='setup'){
+      if(p0.length<6)return gmsg('Use at least 6 characters.');
+      if(p0!==$('g2').value)return gmsg('Passwords do not match.');
+      await saveNew(p0);unlock();return;
+    }
+    if(Date.now()<lockUntil)return gmsg('Too many attempts. Try again in '+Math.ceil((lockUntil-Date.now())/1000)+' s.');
+    const a=getAcct();
+    if(!a||await hashPw(p0,a.salt)!==a.hash){
+      if(++fails>=5){fails=0;lockUntil=Date.now()+30000;return gmsg('Too many attempts. Locked for 30 seconds.')}
+      return gmsg('Incorrect password.');
+    }
+    fails=0;
+    if(gMode==='change'){
+      const n=$('g1').value;
+      if(n.length<6)return gmsg('New password needs at least 6 characters.');
+      if(n!==$('g2').value)return gmsg('New passwords do not match.');
+      await saveNew(n);closeGate();return;
+    }
+    unlock();
+  }catch(err){gmsg('Sign-in is not available in this browser.')}
+};
+$('gGo').onclick=gSubmit;
+['g0','g1','g2'].forEach(id=>$(id).addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();gSubmit()}}));
+$('gCancel').onclick=closeGate;
+const menu=$('menu'),wb=$('whoBtn');
+const setMenu=o=>{menu.classList.toggle('hide',!o);wb.setAttribute('aria-expanded',String(o))};
+wb.onclick=e=>{e.stopPropagation();setMenu(menu.classList.contains('hide'))};
+document.addEventListener('click',e=>{if(!$('who').contains(e.target))setMenu(false)});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')setMenu(false)});
+$('chg').onclick=()=>{setMenu(false);openGate('change')};
+$('out').onclick=()=>{setMenu(false);lock()};
+if(getAcct()&&sessGet())unlock();else openGate(getAcct()?'login':'setup');
+
+/* ---------- Map tools: zoom, pan, select ---------- */
+let selIdx=-1,selKey=null,lastP=null,lastRecs=[],mapPts=[],mapGeo=null,selMode=true,hoverIdx=-1,hoverRaf=0,addMode=false,userPts=[],renames={},tblIdCol=1,snapOn=true,snapPt=null,snapKey='';
+const views={cv:{k:1,x:0,y:0}};
+const redraw=()=>{if(lastP)draw(lastP,lastRecs)};
+function selText(){
+  const o=lastRecs[selIdx];
+  return o?'Selected: '+(o.id||'(no ID)')+' \u00b7 Seq '+(selIdx+1)+' \u00b7 E '+o.x.toFixed(3)+' \u00b7 N '+o.y.toFixed(3)+' \u00b7 Horizontal chainage '+fmtCh(o.c):'Click a table row or a point on the map to highlight it. Scroll to zoom, drag to pan. Double-click a Point iD cell to rename it.';
+}
+function zoomAt(f,mx,my){
+  const V=views.cv,cv=$('cv'),W=cv.clientWidth,H=cv.clientHeight,k2=Math.max(0.01,Math.min(400,V.k*f)),r=k2/V.k;
+  V.x=(mx-W/2)-(mx-W/2-V.x)*r;V.y=(my-H/2)-(my-H/2-V.y)*r;V.k=k2;
+  redraw();
+}
+function select(i,fromMap,keyNav){
+  selIdx=i;selKey=i>=0&&lastRecs[i]?lastRecs[i].key:null;
+  const cv=$('cv'),V=views.cv;
+  if(i>=0&&!fromMap&&mapPts[i]){
+    const p=mapPts[i],W=cv.clientWidth,H=cv.clientHeight;
+    if(p[0]<30||p[0]>W-30||p[1]<30||p[1]>H-30){V.x+=W/2-p[0];V.y+=H/2-p[1]}
+  }
+  if(i>=tblN)moreRows(i+1);
+  $('tb').querySelectorAll('tr.sel').forEach(t=>t.classList.remove('sel'));
+  const tr=i>=0?$('tb').querySelector('tr[data-i="'+i+'"]'):null;
+  if(tr){
+    tr.classList.add('sel');
+    const tw=tr.closest('.tw');
+    if(fromMap){
+      tw.scrollTop+=tr.getBoundingClientRect().top-tw.getBoundingClientRect().top-tw.clientHeight/2;
+      const rr=tr.getBoundingClientRect();
+      if(rr.top<0||rr.bottom>window.innerHeight)tr.scrollIntoView({block:'nearest',behavior:'smooth'});
+    }
+    else if(keyNav){
+      const a=tr.getBoundingClientRect(),b=tw.getBoundingClientRect(),hh=tw.querySelector('thead').offsetHeight;
+      if(a.top<b.top+hh)tw.scrollTop-=b.top+hh-a.top;else if(a.bottom>b.bottom)tw.scrollTop+=a.bottom-b.bottom;
+    }
+  }
+  $('selInfo').textContent=selText();
+  redraw();
+}
+const swapName=n=>/^start\s/i.test(n)?'END '+n.slice(6):/^end\s/i.test(n)?'START '+n.slice(4):null;
+function swapSE(){
+  lastRecs.forEach(o=>{
+    const n=swapName(o.id||'');
+    if(n!==null)renames[o.x.toFixed(3)+'|'+o.y.toFixed(3)]=n;
+  });
+  const o=lastRecs[selIdx];
+  if(selKey&&o){const n=swapName(o.id||'');if(n!==null)selKey=n+'|'+o.x.toFixed(3)+'|'+o.y.toFixed(3)}
+}
+function fmtCh(c){
+  if($('chFmt').value==='m')return c.toFixed(3);
+  const v=Math.round(c*100)/100,km=Math.floor(v/1000),m=(v-km*1000).toFixed(2);
+  return km+'+'+m.padStart(6,'0');
+}
+function projOn(P,cum,x,y){
+  let best=null;
+  for(let i=0;i<P.length-1;i++){
+    const ax=P[i][0],ay=P[i][1],dx=P[i+1][0]-ax,dy=P[i+1][1]-ay,L2=dx*dx+dy*dy;
+    const t=L2?Math.max(0,Math.min(1,((x-ax)*dx+(y-ay)*dy)/L2)):0;
+    const d=Math.hypot(x-(ax+t*dx),y-(ay+t*dy));
+    if(!best||d<best.d)best={d,c:cum[i]+t*Math.sqrt(L2)};
+  }
+  return best;
+}
+const SNAP_PX=12;
+function bbOf(l){
+  if(l.bb)return l.bb;if(l._bb)return l._bb;
+  let a=Infinity,b=Infinity,c=-Infinity,d=-Infinity;
+  for(const q of l.p){if(q[0]<a)a=q[0];if(q[0]>c)c=q[0];if(q[1]<b)b=q[1];if(q[1]>d)d=q[1]}
+  return l._bb=[a,b,c,d];
+}
+function segDist(w,a,b){
+  const dx=b[0]-a[0],dy=b[1]-a[1],L2=dx*dx+dy*dy,t=L2?Math.max(0,Math.min(1,((w.x-a[0])*dx+(w.y-a[1])*dy)/L2)):0;
+  const x=a[0]+t*dx,y=a[1]+t*dy;return {x,y,d:Math.hypot(w.x-x,w.y-y)};
+}
+function computeSnap(e){
+  if(!mapGeo)return null;
+  const w=s2w(e);if(!w)return null;
+  const V=views.cv,ppu=Math.abs(mapGeo.BX(1)-mapGeo.BX(0))*V.k;if(!(ppu>0))return null;
+  const tol=SNAP_PX/ppu,segs=[],srcs=[];
+  ents.forEach(en=>{if(!en.chain)srcs.push(en)});
+  if(ovr&&$('ovrOn').checked)ovr.lines.forEach(l=>srcs.push(l));
+  for(const en of srcs){
+    const b=bbOf(en);
+    if(w.x<b[0]-tol||w.x>b[2]+tol||w.y<b[1]-tol||w.y>b[3]+tol)continue;
+    for(let j=0;j<en.p.length-1&&segs.length<150;j++){
+      const a=en.p[j],c=en.p[j+1];
+      if(Math.max(a[0],c[0])<w.x-tol||Math.min(a[0],c[0])>w.x+tol||Math.max(a[1],c[1])<w.y-tol||Math.min(a[1],c[1])>w.y+tol)continue;
+      if(segDist(w,a,c).d<=tol)segs.push([a,c]);
+    }
+  }
+  const cands=[],add=(x,y,type,pr)=>{const d=Math.hypot(w.x-x,w.y-y);if(d<=tol)cands.push({x,y,type,score:d*ppu+pr})};
+  const on=id=>$(id).checked;
+  segs.forEach(([a,c])=>{
+    if(on('snEnd')){add(a[0],a[1],'Endpoint',0);add(c[0],c[1],'Endpoint',0)}
+    if(on('snMid'))add((a[0]+c[0])/2,(a[1]+c[1])/2,'Midpoint',2);
+    if(on('snNear')){const n=segDist(w,a,c);add(n.x,n.y,'Nearest',8)}
+  });
+  if(on('snInt')){
+    for(let i=0;i<segs.length;i++)for(let j=i+1;j<segs.length;j++){
+      const h=segInt(segs[i][0],segs[i][1],segs[j][0],segs[j][1]);
+      if(h)add(h[2],h[3],'Intersection',1);
+    }
+  }
+  if(on('snNode')){
+    lastRecs.forEach(o=>add(o.x,o.y,'Node',3));
+  }
+  if(!cands.length)return null;
+  cands.sort((p,q)=>p.score-q.score);
+  const b=cands[0];return {x:b.x,y:b.y,type:b.type,label:b.type};
+}
+function startEdit(td,i){
+  const o=lastRecs[i];if(!o||td.querySelector('input'))return;
+  const old=o.id,inp=document.createElement('input');
+  inp.type='text';inp.value=old;inp.className='cellEdit';
+  td.textContent='';td.appendChild(inp);inp.focus();inp.select();
+  let done=false;
+  const finish=ok=>{
+    if(done)return;done=true;
+    const v=inp.value.trim();
+    if(ok&&v!==old){
+      const ck=o.x.toFixed(3)+'|'+o.y.toFixed(3);
+      renames[ck]=v;selKey=v+'|'+ck;
+      run();
+    }else td.textContent=old;
+  };
+  inp.onkeydown=ev=>{ev.stopPropagation();if(ev.key==='Enter'){ev.preventDefault();finish(true)}else if(ev.key==='Escape'){ev.preventDefault();finish(false)}};
+  inp.onblur=()=>finish(true);
+  inp.onclick=ev=>ev.stopPropagation();inp.ondblclick=ev=>ev.stopPropagation();
+}
+function s2w(e){
+  if(!mapGeo)return null;
+  const r=$('cv').getBoundingClientRect(),mx=e.clientX-r.left,my=e.clientY-r.top,V=views.cv,{IX,IY,W,H}=mapGeo;
+  return {x:IX((mx-W/2-V.x)/V.k+W/2),y:IY((my-H/2-V.y)/V.k+H/2)};
+}
+function syncTools(){
+  const cv=$('cv');
+  $('zPick').classList.toggle('on',selMode);$('zAdd').classList.toggle('on',addMode);
+  cv.classList.toggle('pick',selMode||addMode);cv.style.cursor='';
+  $('addBar').classList.toggle('hide',!(addMode||userPts.length));
+  $('snapBar').classList.toggle('hide',!addMode);$('zSnap').classList.toggle('on',snapOn);
+  if(!addMode){snapPt=null;snapKey=''}
+  $('addTxt').textContent=addMode?'Add point tool on: click the map to place a New Point. New points: '+userPts.length:userPts.length+' new point'+(userPts.length===1?'':'s')+' added.';
+  $('addUndo').classList.toggle('hide',!userPts.length);$('addClear').classList.toggle('hide',!userPts.length);
+}
+function addAt(e){
+  const sp=(snapOn&&addMode)?computeSnap(e):null,w=sp||s2w(e);if(!w)return;
+  userPts.push({x:w.x,y:w.y});snapPt=null;snapKey='';
+  selKey='New Point|'+w.x.toFixed(3)+'|'+w.y.toFixed(3);
+  run();
+  if(selIdx>=0)select(selIdx,true);
+  syncTools();
+}
+(function(){
+  const cv=$('cv');let drag=null;
+  cv.addEventListener('wheel',e=>{e.preventDefault();const r=cv.getBoundingClientRect();zoomAt(e.deltaY<0?1.25:0.8,e.clientX-r.left,e.clientY-r.top)},{passive:false});
+  cv.addEventListener('pointerdown',e=>{cv.setPointerCapture(e.pointerId);drag={x:e.clientX,y:e.clientY,vx:views.cv.x,vy:views.cv.y,moved:false}});
+  cv.addEventListener('pointermove',e=>{
+    if(!drag){
+      if(addMode){
+        const sp=snapOn?computeSnap(e):null,w=sp||s2w(e);
+        if(w)$('addTxt').textContent=(sp?'Snap: '+sp.label+' \u2013 ':'')+'New point at E '+w.x.toFixed(3)+'  N '+w.y.toFixed(3)+' \u2013 click to add. New points: '+userPts.length;
+        const kk=sp?sp.type+sp.x.toFixed(4)+sp.y.toFixed(4):'';
+        if(kk!==snapKey){snapKey=kk;snapPt=sp;if(!hoverRaf)hoverRaf=requestAnimationFrame(()=>{hoverRaf=0;redraw()})}
+      }
+      if(!selMode)return;
+      const r=cv.getBoundingClientRect(),mx=e.clientX-r.left,my=e.clientY-r.top;
+      let best=-1,bd=144;
+      mapPts.forEach((p,i)=>{const dd=(p[0]-mx)**2+(p[1]-my)**2;if(dd<bd){bd=dd;best=i}});
+      if(best!==hoverIdx){
+        hoverIdx=best;cv.style.cursor=best>=0?'pointer':'';
+        if(!hoverRaf)hoverRaf=requestAnimationFrame(()=>{hoverRaf=0;redraw()});
+      }
+      return;
+    }
+    const dx=e.clientX-drag.x,dy=e.clientY-drag.y;
+    if(Math.abs(dx)+Math.abs(dy)>3)drag.moved=true;
+    if(drag.moved){views.cv.x=drag.vx+dx;views.cv.y=drag.vy+dy;redraw()}
+  });
+  cv.addEventListener('pointerup',e=>{
+    const d=drag;drag=null;
+    if(d&&!d.moved&&addMode){addAt(e);return}
+    if(d&&!d.moved&&selMode){
+      const r=cv.getBoundingClientRect(),mx=e.clientX-r.left,my=e.clientY-r.top;
+      let best=-1,bd=196;
+      mapPts.forEach((p,i)=>{const dd=(p[0]-mx)**2+(p[1]-my)**2;if(dd<bd){bd=dd;best=i}});
+      select(best,true);
+    }
+  });
+  cv.addEventListener('pointercancel',()=>{drag=null});
+  cv.addEventListener('pointerleave',()=>{if(hoverIdx>=0){hoverIdx=-1;cv.style.cursor='';redraw()}});
+  $('zSnap').onclick=()=>{
+    snapOn=!snapOn;snapPt=null;snapKey='';syncTools();
+    $('selInfo').textContent=snapOn?'Snap on (F3): new points snap to endpoints, intersections, midpoints and nodes.':'Snap off (F3): new points are placed exactly where you click.';
+    redraw();
+  };
+  document.addEventListener('keydown',e=>{
+    if(e.key!=='F3')return;
+    if(document.body.classList.contains('locked')||document.body.classList.contains('gate-open'))return;
+    e.preventDefault();$('zSnap').click();
+  });
+  $('zAdd').onclick=()=>{
+    addMode=!addMode;if(addMode)selMode=false;hoverIdx=-1;syncTools();
+    $('selInfo').textContent=addMode?'Add point tool: click on the map to add a point. Its Easting and Northing are added to the table.':selText();
+    redraw();
+  };
+  $('addUndo').onclick=()=>{userPts.pop();selKey=null;run();syncTools()};
+  $('addClear').onclick=()=>{userPts=[];selKey=null;run();syncTools()};
+  $('zPick').onclick=()=>{
+    selMode=!selMode;if(selMode)addMode=false;hoverIdx=-1;syncTools();
+    $('selInfo').textContent=selMode?selText():'Select tool is off: drag to pan. Click the arrow button to select points again.';
+    redraw();
+  };
+  $('zIn').onclick=()=>zoomAt(1.6,cv.clientWidth/2,cv.clientHeight/2);
+  $('zOut').onclick=()=>zoomAt(1/1.6,cv.clientWidth/2,cv.clientHeight/2);
+  $('zFit').onclick=()=>{views.cv={k:1,x:0,y:0};redraw()};
+  $('zSel').onclick=()=>{
+    if(selIdx<0||!mapGeo||!lastRecs[selIdx]){$('selInfo').textContent='Select a point first (click a table row or a point on the map).';return}
+    const o=lastRecs[selIdx],k=Math.max(views.cv.k,8);
+    views.cv={k,x:-(mapGeo.BX(o.x)-mapGeo.W/2)*k,y:-(mapGeo.BY(o.y)-mapGeo.H/2)*k};
+    redraw();
+  };
+  $('tb').addEventListener('click',e=>{
+    const tr=e.target.closest('tr[data-i]');if(!tr)return;
+    const i=+tr.dataset.i;select(selIdx===i?-1:i,false);
+  });
+  document.addEventListener('keydown',e=>{
+    if(e.key!=='ArrowDown'&&e.key!=='ArrowUp')return;
+    if(/^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName))return;
+    if(document.body.classList.contains('locked')||document.body.classList.contains('gate-open'))return;
+    if($('res').classList.contains('hide')||!tblBody.length)return;
+    e.preventDefault();
+    const d=e.key==='ArrowDown'?1:-1,n=tblBody.length;
+    const i=selIdx<0?(d>0?0:n-1):Math.max(0,Math.min(n-1,selIdx+d));
+    if(i!==selIdx)select(i,false,true);
+  });
+  $('tb').addEventListener('dblclick',e=>{
+    const td=e.target.closest('td');if(!td||td.cellIndex!==tblIdCol)return;
+    const tr=td.parentElement;if(!tr||tr.dataset.i===undefined)return;
+    const i=+tr.dataset.i;
+    if(selIdx!==i)select(i,false);
+    startEdit(td,i);
+  });
+  window.addEventListener('resize',redraw);
+})();
+
+/* ---------- Overview DXF (original colours) ---------- */
+let ovr=null,ovrPending=false;
+const ACI9={1:'#ff0000',2:'#ffff00',3:'#00ff00',4:'#00ffff',5:'#0000ff',6:'#ff00ff',8:'#808080',9:'#c0c0c0'};
+function aciColor(n){
+  if(!(n>0&&n<256)||n===7)return null;
+  if(ACI9[n])return ACI9[n];
+  if(n>=250){const v=[0x33,0x50,0x69,0x82,0xbe,0xff][n-250];return 'rgb('+v+','+v+','+v+')'}
+  const g=Math.floor((n-10)/10),pos=(n-10)%10,h=g*15/60,sat=pos%2?0.5:1,val=[1,.8,.6,.5,.3][Math.floor(pos/2)];
+  const f=k=>{const kk=(k+h)%6;return val-val*sat*Math.max(0,Math.min(kk,4-kk,1))};
+  return 'rgb('+[f(5),f(3),f(1)].map(x=>Math.round(x*255)).join(',')+')';
+}
+function parseOverview(txt){
+  const L=txt.split(/\r?\n/),pr=[];
+  for(let i=0;i+1<L.length;i+=2)pr.push([parseInt(L[i].trim()),L[i+1].trim()]);
+  let sec='',expect=false,cur=null,poly=null;const layers={},ents=[];
+  const fin=()=>{
+    if(!cur)return;
+    if(cur.t==='LAYER'){if(cur.name)layers[cur.name]={aci:cur.aci,off:cur.aci<0||(cur.flags&1)===1}}
+    else if(cur.t==='VERTEX'){if(poly&&cur.p[0]&&cur.p[0][1]!==undefined)poly.p.push(cur.p[0])}
+    else if(cur.t==='POLYLINE')poly=cur;
+    else if(cur.t==='SEQEND'){if(poly){ents.push(poly);poly=null}}
+    else if(cur.t==='LWPOLYLINE'||cur.t==='LINE')ents.push(cur);
+    cur=null;
+  };
+  for(const [c,v] of pr){
+    if(c===0){
+      fin();
+      if(v==='SECTION'){expect=true;sec='';continue}
+      if(v==='ENDSEC'){sec='';continue}
+      if(sec==='ENTITIES'||(sec==='TABLES'&&v==='LAYER'))cur={t:v,layer:'0',p:[],closed:false,flags:0};
+      continue;
+    }
+    if(expect&&c===2){sec=v;expect=false;continue}
+    if(!cur)continue;
+    if(cur.t==='LAYER'){
+      if(c===2)cur.name=v;else if(c===62)cur.aci=parseInt(v);else if(c===70)cur.flags=parseInt(v);
+      continue;
+    }
+    if(c===8)cur.layer=v;
+    else if(c===62)cur.aci=parseInt(v);
+    else if(c===420)cur.tc=parseInt(v);
+    else if(c===70&&(cur.t==='LWPOLYLINE'||cur.t==='POLYLINE'))cur.closed=(parseInt(v)&1)===1;
+    else if(c===10||c===11||c===20||c===21){
+      if(cur.t==='POLYLINE')continue;
+      const idx=c%10,isX=c<20,val=parseFloat(v);
+      if(cur.t==='LWPOLYLINE'){if(isX)cur.p.push([val,undefined]);else if(cur.p.length)cur.p[cur.p.length-1][1]=val}
+      else{cur.p[idx]=cur.p[idx]||[undefined,undefined];cur.p[idx][isX?0:1]=val}
+    }
+  }
+  fin();
+  const out=[];
+  for(const e of ents){
+    const lay=layers[e.layer];if(lay&&lay.off)continue;
+    const p=e.p.filter(q=>q&&isFinite(q[0])&&isFinite(q[1]));
+    if(e.closed&&p.length>2)p.push(p[0]);
+    if(p.length<2)continue;
+    let col=null;
+    if(e.tc!==undefined&&isFinite(e.tc)&&e.tc>=0)col='#'+(e.tc&0xffffff).toString(16).padStart(6,'0');
+    else if(e.aci>0&&e.aci<256)col=aciColor(e.aci);
+    else if(lay)col=aciColor(Math.abs(lay.aci));
+    const xs=p.map(q=>q[0]),ys=p.map(q=>q[1]);
+    out.push({p,col,bb:[Math.min(...xs),Math.min(...ys),Math.max(...xs),Math.max(...ys)]});
+  }
+  return out;
+}
+function fitOvr(){
+  if(!ovr||!mapGeo)return false;
+  const {BX,BY,W,H}=mapGeo,b=ovr.bb,xa=BX(b[0]),xb=BX(b[2]),ya=BY(b[3]),yb=BY(b[1]);
+  const w=Math.abs(xb-xa)||1,h=Math.abs(yb-ya)||1,k=Math.max(0.01,Math.min((W-60)/w,(H-60)/h));
+  Object.assign(views.cv,{k,x:-((xa+xb)/2-W/2)*k,y:-((ya+yb)/2-H/2)*k});
+  return true;
+}
+function ovrReset(msg,cls){
+  ovr=null;$('zOvr').classList.add('hide');$('ovrClear').classList.add('hide');
+  const m=$('ovrMsg');m.textContent=msg;m.className='msg small '+cls;redraw();
+}
+$('ovr').onchange=async e=>{
+  const f=e.target.files[0];if(!f)return;
+  let lines=[];
+  try{lines=parseOverview(await f.text())}catch(x){}
+  if(!lines.length){ovrReset('No polylines or lines found in the ENTITIES section (binary DXF is not supported).','err');return}
+  const bb=[Math.min(...lines.map(l=>l.bb[0])),Math.min(...lines.map(l=>l.bb[1])),Math.max(...lines.map(l=>l.bb[2])),Math.max(...lines.map(l=>l.bb[3]))];
+  ovr={lines,bb};ovrPending=true;
+  const m=$('ovrMsg');m.textContent=lines.length+' polylines loaded, shown in their original colours.';m.className='msg ok';
+  $('zOvr').classList.remove('hide');$('ovrClear').classList.remove('hide');
+  if(fitOvr())ovrPending=false;
+  redraw();
+};
+$('ovrOn').onchange=redraw;
+$('ovrClear').onclick=()=>{$('ovr').value='';ovrReset('Overview removed. Polylines from this file are drawn behind the route in their original DXF colours.','')};
+$('zOvr').onclick=()=>{if(fitOvr())redraw()};
+
+/* ---------- Table (rows load as you scroll) ---------- */
+let tblBody=[],tblN=0;
+const rowHtml=(r,i)=>'<tr data-i="'+i+'"'+(i===selIdx?' class="sel"':'')+'>'+r.map(v=>'<td>'+String(v).replace(/</g,'&lt;')+'</td>').join('')+'</tr>';
+function moreRows(upTo){
+  const end=Math.min(tblBody.length,Math.max(upTo,tblN+400));
+  if(end<=tblN)return;
+  $('tb').tBodies[0].insertAdjacentHTML('beforeend',tblBody.slice(tblN,end).map((r,j)=>rowHtml(r,tblN+j)).join(''));
+  tblN=end;
+}
+$('tb').closest('.tw').addEventListener('scroll',e=>{const t=e.target;if(t.scrollTop+t.clientHeight>t.scrollHeight-300)moreRows(0)});
+
+/* ---------- DXF ---------- */
+function parseDXF(txt){
+  const L=txt.split(/\r?\n/),res=[];
+  let sec='',expectName=false,cur=null,poly=null;
+  const fin=()=>{
+    if(!cur)return;
+    if(cur.t==='VERTEX'){if(poly&&cur.p[0]&&cur.p[0][1]!==undefined)poly.p.push(cur.p[0]);}
+    else if(cur.t==='POLYLINE')poly=cur;
+    else if(cur.t==='SEQEND'){if(poly){res.push(poly);poly=null}}
+    else if(cur.t==='LWPOLYLINE'||cur.t==='LINE')res.push(cur);
+    cur=null;
+  };
+  for(let i=0;i+1<L.length;i+=2){
+    const c=parseInt(L[i].trim()),v=L[i+1].trim();
+    if(c===0){
+      fin();
+      if(v==='SECTION'){expectName=true;sec='';continue}
+      if(v==='ENDSEC'){sec='';continue}
+      if(sec==='ENTITIES')cur={t:v,layer:'0',p:[],closed:false};
+      continue;
+    }
+    if(expectName&&c===2){sec=v;expectName=false;continue}
+    if(!cur)continue;
+    if(c===8)cur.layer=v;
+    else if(c===70&&(cur.t==='LWPOLYLINE'||cur.t==='POLYLINE'))cur.closed=(parseInt(v)&1)===1;
+    else if(c===10||c===11||c===20||c===21){
+      if(cur.t==='POLYLINE')continue;
+      const idx=c%10,isX=c<20,val=parseFloat(v);
+      if(cur.t==='LWPOLYLINE'){ if(isX)cur.p.push([val,undefined]); else if(cur.p.length)cur.p[cur.p.length-1][1]=val; }
+      else{ cur.p[idx]=cur.p[idx]||[undefined,undefined]; cur.p[idx][isX?0:1]=val; }
+    }
+  }
+  fin();
+  const list=[];
+  for(const e of res){
+    const p=e.p.filter(q=>q&&isFinite(q[0])&&isFinite(q[1]));
+    if(e.closed&&p.length>2)p.push(p[0]);
+    if(p.length>=2)list.push({t:e.t,layer:e.layer,p});
+  }
+  /* optional chain of loose LINEs */
+  const lines=list.filter(e=>e.t==='LINE');
+  if(lines.length>1){
+    const tol=0.001,seg=lines.map(l=>l.p.slice());
+    let ch=seg.shift();
+    const d=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1]);
+    let go=true;
+    while(go&&seg.length){
+      go=false;
+      for(let i=0;i<seg.length;i++){
+        const s=seg[i],e=ch[ch.length-1],b=ch[0];
+        if(d(e,s[0])<tol){ch.push(s[1]);}
+        else if(d(e,s[1])<tol){ch.push(s[0]);}
+        else if(d(b,s[1])<tol){ch.unshift(s[0]);}
+        else if(d(b,s[0])<tol){ch.unshift(s[1]);}
+        else continue;
+        seg.splice(i,1);go=true;break;
+      }
+    }
+    list.push({t:'CHAINED LINEs',layer:'(all lines)',p:ch,chain:true});
+  }
+  list.forEach(e=>{e.len=0;for(let i=1;i<e.p.length;i++)e.len+=Math.hypot(e.p[i][0]-e.p[i-1][0],e.p[i][1]-e.p[i-1][1])});
+  return list;
+}
+
+/* ---------- CSV ---------- */
+function parseCSV(txt){
+  txt=txt.replace(/^\uFEFF/,'');
+  const first=txt.split(/\r?\n/)[0]||'';
+  const dl=[',',';','\t'].map(d=>[d,first.split(d).length]).sort((a,b)=>b[1]-a[1])[0][0];
+  const R=[];let r=[],f='',q=false;
+  for(let i=0;i<txt.length;i++){
+    const ch=txt[i];
+    if(q){if(ch==='"'){if(txt[i+1]==='"'){f+='"';i++}else q=false}else f+=ch}
+    else if(ch==='"')q=true;
+    else if(ch===dl){r.push(f);f=''}
+    else if(ch==='\n'||ch==='\r'){if(ch==='\r'&&txt[i+1]==='\n')i++;r.push(f);f='';if(r.some(x=>x!==''))R.push(r);r=[]}
+    else f+=ch;
+  }
+  if(f!==''||r.length){r.push(f);if(r.some(x=>x!==''))R.push(r)}
+  return R;
+}
+const esc=v=>{v=String(v??'');return /[",\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
+
+/* ---------- UI ---------- */
+function fillSel(sel,opts,pick){sel.innerHTML='';opts.forEach(([v,t])=>{const o=document.createElement('option');o.value=v;o.textContent=t;sel.appendChild(o)});if(pick!==undefined&&pick>=0)sel.value=pick}
+function guess(re){return hdr.findIndex(h=>re.test(h.trim()))}
+
+$('dxf').onchange=async e=>{
+  views.cv={k:1,x:0,y:0};selIdx=-1;selKey=null;ovrPending=!!ovr;userPts=[];
+  const f=e.target.files[0];if(!f)return;
+  try{ents=parseDXF(await f.text())}catch(x){ents=[]}
+  const m=$('dxfMsg');
+  if(!ents.length){m.textContent='No polyline or line entities found in the ENTITIES section.';m.className='msg err';}
+  else{
+    m.textContent=ents.length+' candidate entit'+(ents.length>1?'ies':'y')+' found.';m.className='msg ok';
+    let best=0;ents.forEach((x,i)=>{if(x.len>ents[best].len&&!(x.chain&&false))best=i});
+    fillSel($('ent'),ents.map((x,i)=>[i,x.t+' · layer '+x.layer+' · '+x.len.toFixed(1)+' m · '+x.p.length+' vertices']),best);
+  }
+  run();
+};
+$('csv').onchange=async e=>{
+  renames={};
+  const f=e.target.files[0];if(!f)return;
+  const R=parseCSV(await f.text());
+  const m=$('csvMsg');
+  if(R.length<2){m.textContent='Could not read any data rows.';m.className='msg err';rows=[];hdr=[];run();return}
+  hdr=R[0];rows=R.slice(1);
+  const opts=hdr.map((h,i)=>[i,h||('Column '+(i+1))]);
+  fillSel($('cE'),opts,guess(/east|^e$|^x$/i));
+  fillSel($('cN'),opts,guess(/north|^n$|^y$/i));
+  fillSel($('cZ'),[[-1,'(none)'],...opts],guess(/elev|^z$|height|^h$/i));
+  m.textContent=rows.length+' rows, '+hdr.length+' columns loaded.';m.className='msg ok';
+  run();
+};
+['ent','cE','cN','cZ','rev','all'].forEach(id=>$(id).onchange=run);
+$('rev').onchange=()=>{swapSE();run()};
+$('chFmt').onchange=run;
+
+function run(){
+  const hasE=ents.length>0,ready=hasE&&rows.length>0;
+  $('opts').classList.toggle('hide',!hasE);$('pts').classList.toggle('hide',!hasE);$('res').classList.toggle('hide',!ready);
+  ['cE','cN','cZ'].forEach(id=>$(id).parentElement.classList.toggle('hide',!rows.length));
+  if(hasE){routePoints();computeInt();}
+  if(!ready)return;
+  const ent=ents[+$('ent').value];
+  let P=ent.p.slice();if($('rev').checked)P.reverse();
+  const iE=+$('cE').value,iN=+$('cN').value,iZ=+$('cZ').value;
+  /* cumulative chainage */
+  const cum=[0];for(let i=1;i<P.length;i++)cum.push(cum[i-1]+Math.hypot(P[i][0]-P[i-1][0],P[i][1]-P[i-1][1]));
+  const recs=[];let skipped=0;
+  rows.forEach((r,k)=>{
+    const x=parseFloat(r[iE]),y=parseFloat(r[iN]);
+    if(!isFinite(x)||!isFinite(y)){skipped++;return}
+    let best=null;
+    for(let i=0;i<P.length-1;i++){
+      const ax=P[i][0],ay=P[i][1],dx=P[i+1][0]-ax,dy=P[i+1][1]-ay,L2=dx*dx+dy*dy;
+      const t=L2?Math.max(0,Math.min(1,((x-ax)*dx+(y-ay)*dy)/L2)):0;
+      const d=Math.hypot(x-(ax+t*dx),y-(ay+t*dy));
+      if(!best||d<best.d)best={d,c:cum[i]+t*Math.sqrt(L2)};
+    }
+    recs.push({r,x,y,z:iZ>=0?r[iZ]:'',c:best.c,off:best.d,k});
+  });
+  recs.sort((a,b)=>a.c-b.c||a.k-b.k);
+  if(merged&&rp){
+    const pi=Math.max(0,guess(/^point.?i?d$|^id$|^name$/i));
+    rp.pts.forEach((p,i)=>{
+      const r=new Array(hdr.length).fill('');
+      r[pi]='';r[iE]=p[0].toFixed(3);r[iN]=p[1].toFixed(3);
+      recs.push({r,x:p[0],y:p[1],z:'',c:rp.ch[i],off:0,k:-1-i,rp:true});
+    });
+    recs.sort((a,b)=>a.c-b.c||(a.rp?1:0)-(b.rp?1:0)||a.k-b.k);
+  }
+  if(kmOn){
+    const pi=Math.max(0,guess(/^point.?i?d$|^id$|^name$/i)),Lt=cum[cum.length-1];
+    let sg=0;
+    for(let k=1;k*1000<=Lt+1e-9;k++){
+      const d=k*1000;
+      while(sg<P.length-2&&cum[sg+1]<d)sg++;
+      const l=cum[sg+1]-cum[sg],t=l?(d-cum[sg])/l:0;
+      const x=P[sg][0]+t*(P[sg+1][0]-P[sg][0]),y=P[sg][1]+t*(P[sg+1][1]-P[sg][1]);
+      const r=new Array(hdr.length).fill('');
+      r[pi]='KM-'+String(k).padStart(2,'0');r[iE]=x.toFixed(3);r[iN]=y.toFixed(3);
+      recs.push({r,x,y,z:'',c:d,off:0,k:-1000-k,rp:true});
+    }
+    recs.sort((a,b)=>a.c-b.c||(a.rp?1:0)-(b.rp?1:0)||a.k-b.k);
+  }
+  if(intOn&&intPts.length){
+    const pi=Math.max(0,guess(/^point.?i?d$|^id$|^name$/i)),li=guess(/layer.?name|^layer$/i);
+    intPts.forEach((q,i)=>{
+      const r=new Array(hdr.length).fill('');
+      r[pi]=q.name;r[iE]=q.x.toFixed(3);r[iN]=q.y.toFixed(3);
+      if(li>=0)r[li]=q.layer;
+      recs.push({r,x:q.x,y:q.y,z:'',c:q.c,off:0,k:-2000-i,rp:true,layer:q.layer});
+    });
+    recs.sort((a,b)=>a.c-b.c||(a.rp?1:0)-(b.rp?1:0)||a.k-b.k);
+  }
+  if(userPts.length){
+    const piU=Math.max(0,guess(/^point.?i?d$|^id$|^name$/i));
+    userPts.forEach((u,i)=>{
+      const pj=projOn(P,cum,u.x,u.y),r=new Array(hdr.length).fill('');
+      r[piU]='New Point';r[iE]=u.x.toFixed(3);r[iN]=u.y.toFixed(3);
+      recs.push({r,x:u.x,y:u.y,z:'',c:pj.c,off:pj.d,k:-5000-i,rp:true,user:true});
+    });
+    recs.sort((a,b)=>a.c-b.c||(a.rp?1:0)-(b.rp?1:0)||a.k-b.k);
+  }
+  const pidx=Math.max(0,guess(/^point.?i?d$|^id$|^name$/i));
+  recs.forEach(o=>{
+    const ck=o.x.toFixed(3)+'|'+o.y.toFixed(3);
+    if(renames[ck]!==undefined)o.r[pidx]=renames[ck];
+    o.id=String(o.r[pidx]||'');o.key=o.id+'|'+ck;
+  });
+  selIdx=selKey?recs.findIndex(o=>o.key===selKey):-1;hoverIdx=-1;
+  const keep=$('all').checked;
+  const head=keep?['Seq',...hdr,'HORIZONTAL CHAINAGE','Offset']:['Seq',hdr[pidx]||'ID','Easting','Northing',...(iZ>=0?['Elevation']:[]),'HORIZONTAL CHAINAGE','Offset'];
+  const body=recs.map((o,i)=>keep?[i+1,...o.r,fmtCh(o.c),o.off.toFixed(3)]:[i+1,o.r[pidx],o.x,o.y,...(iZ>=0?[o.z]:[]),fmtCh(o.c),o.off.toFixed(3)]);
+  tblIdCol=keep?pidx+1:1;
+  out={head,body,pts:recs.map(o=>[o.x,o.y,parseFloat(o.z)])};
+  const maxOff=recs.reduce((m,o)=>o.user?m:Math.max(m,o.off),0);
+  const s=$('sum');
+  s.className='msg '+(maxOff>5?'err':'ok');
+  const nx=recs.filter(o=>o.rp).length;s.textContent=(nx?(recs.length-nx)+' points sorted + '+nx+' added points along ':recs.length+' points sorted along ')+cum[cum.length-1].toFixed(1)+' m of pipeline. Largest offset from the line: '+maxOff.toFixed(2)+' m.'+(maxOff>5?' Check that the right entity and columns are selected.':'')+(skipped?' '+skipped+' row(s) with non-numeric coordinates were skipped.':'');
+  $('tb').innerHTML='<thead><tr>'+head.map(h=>'<th>'+String(h).replace(/</g,'&lt;')+'</th>').join('')+'</tr></thead><tbody></tbody>';tblBody=body;tblN=0;moreRows(Math.max(400,selIdx+1));
+  lastP=P;lastRecs=recs;$('selInfo').textContent=selText();
+  draw(P,recs);
+}
+
+function draw(P,recs,cid){
+  const cv=$(cid||'cv'),g=cv.getContext('2d'),dpr=window.devicePixelRatio||1,W=cv.clientWidth||900,H=cv.clientHeight||340,cs=getComputedStyle(document.documentElement),main=!cid,V=views[cid||'cv']||{k:1,x:0,y:0};
+  cv.width=Math.round(W*dpr);cv.height=Math.round(H*dpr);g.setTransform(dpr,0,0,dpr,0,0);
+  const ink=cs.getPropertyValue('--ink'),acc=cs.getPropertyValue('--acc'),warn=cs.getPropertyValue('--warn');
+  g.clearRect(0,0,W,H);
+  const xs=P.map(p=>p[0]).concat(recs.map(r=>r.x)),ys=P.map(p=>p[1]).concat(recs.map(r=>r.y));
+  const x0=Math.min(...xs),x1=Math.max(...xs),y0=Math.min(...ys),y1=Math.max(...ys),m=30;
+  const sc=Math.min((W-2*m)/((x1-x0)||1),(H-2*m)/((y1-y0)||1));
+  const ox=(W-sc*(x1-x0))/2,oy=(H-sc*(y1-y0))/2;
+  const BX=x=>ox+(x-x0)*sc,BY=y=>H-(oy+(y-y0)*sc);
+  const X=x=>(BX(x)-W/2)*V.k+W/2+V.x,Y=y=>(BY(y)-H/2)*V.k+H/2+V.y;
+  if(main){mapGeo={BX,BY,W,H,IX:bx=>x0+(bx-ox)/sc,IY:by=>y0+(H-by-oy)/sc};if(ovrPending&&ovr&&fitOvr())ovrPending=false}
+  if(main&&ovr&&$('ovrOn').checked){
+    g.lineWidth=1;
+    for(const l of ovr.lines){
+      const xa=X(l.bb[0]),xb=X(l.bb[2]),ya=Y(l.bb[3]),yb=Y(l.bb[1]);
+      if(xb<0||xa>W||yb<0||ya>H)continue;
+      g.strokeStyle=l.col||ink;g.beginPath();
+      l.p.forEach((p,i)=>i?g.lineTo(X(p[0]),Y(p[1])):g.moveTo(X(p[0]),Y(p[1])));g.stroke();
+    }
+  }
+  g.strokeStyle=acc;g.lineWidth=2;g.beginPath();P.forEach((p,i)=>i?g.lineTo(X(p[0]),Y(p[1])):g.moveTo(X(p[0]),Y(p[1])));g.stroke();
+  /* direction arrows */
+  for(let i=0;i<P.length-1;i++){
+    const ax=X(P[i][0]),ay=Y(P[i][1]),bx=X(P[i+1][0]),by=Y(P[i+1][1]),l=Math.hypot(bx-ax,by-ay);
+    if(l<40)continue;
+    const mx=(ax+bx)/2,my=(ay+by)/2,a=Math.atan2(by-ay,bx-ax);
+    g.fillStyle=acc;g.beginPath();g.moveTo(mx+9*Math.cos(a),my+9*Math.sin(a));
+    g.lineTo(mx+9*Math.cos(a+2.5),my+9*Math.sin(a+2.5));g.lineTo(mx+9*Math.cos(a-2.5),my+9*Math.sin(a-2.5));g.fill();
+  }
+  g.font='11px system-ui,sans-serif';
+  recs.forEach((o,i)=>{
+    g.fillStyle=o.user?'#22c55e':(o.off>5?warn:ink);g.beginPath();g.arc(X(o.x),Y(o.y),Math.min(3+(V.k-1)*.5,7),0,7);g.fill();
+    const sx=X(o.x),sy=Y(o.y);
+    if(recs.length<=60&&V.k<5)g.fillText(i+1,sx+5,sy-5);
+    else if(main&&V.k>=5&&sx>0&&sx<W&&sy>0&&sy<H&&o.id)g.fillText(o.id,sx+7,sy-7);
+  });
+  if(main){
+    mapPts=recs.map(o=>[X(o.x),Y(o.y)]);
+    if(addMode&&snapOn&&snapPt){
+      const mx=X(snapPt.x),my=Y(snapPt.y),q=7,ty=snapPt.type;
+      g.save();g.strokeStyle='#ffd43b';g.lineWidth=2.2;g.beginPath();
+      if(ty==='Endpoint')g.rect(mx-q,my-q,2*q,2*q);
+      else if(ty==='Midpoint'){g.moveTo(mx,my-q);g.lineTo(mx+q,my+q);g.lineTo(mx-q,my+q);g.closePath()}
+      else if(ty==='Intersection'){g.moveTo(mx-q,my-q);g.lineTo(mx+q,my+q);g.moveTo(mx+q,my-q);g.lineTo(mx-q,my+q)}
+      else if(ty==='Node'){g.arc(mx,my,q,0,7);g.moveTo(mx-q,my);g.lineTo(mx+q,my);g.moveTo(mx,my-q);g.lineTo(mx,my+q)}
+      else{g.moveTo(mx-q,my-q);g.lineTo(mx+q,my-q);g.lineTo(mx-q,my+q);g.lineTo(mx+q,my+q);g.closePath()}
+      g.stroke();
+      g.font='bold 12px system-ui,sans-serif';const tw=g.measureText(ty).width+12;
+      g.fillStyle='#ffd43b';g.fillRect(mx+14,my+10,tw,20);g.fillStyle='#1a1a1a';g.fillText(ty,mx+20,my+25);
+      g.restore();
+    }
+    if(hoverIdx>=0&&hoverIdx!==selIdx&&recs[hoverIdx]){
+      const o=recs[hoverIdx],hx=X(o.x),hy=Y(o.y);
+      g.save();g.lineWidth=2;g.strokeStyle=acc;g.beginPath();g.arc(hx,hy,10,0,7);g.stroke();
+      g.font='bold 12px system-ui,sans-serif';
+      const t=o.id||('Seq '+(hoverIdx+1)),w=g.measureText(t).width+12;
+      g.fillStyle='rgba(0,0,0,.75)';g.fillRect(hx+12,hy-24,w,20);g.fillStyle='#fff';g.fillText(t,hx+18,hy-9);g.restore();
+    }
+    if(selIdx>=0&&recs[selIdx]){
+      const o=recs[selIdx],sx=X(o.x),sy=Y(o.y);
+      g.save();g.lineWidth=3;g.strokeStyle='#f43f5e';g.fillStyle='rgba(244,63,94,.25)';
+      g.beginPath();g.arc(sx,sy,14,0,7);g.fill();g.stroke();
+      g.fillStyle='#f43f5e';g.beginPath();g.arc(sx,sy,5,0,7);g.fill();
+      g.font='bold 12px system-ui,sans-serif';
+      const t=(o.id||'(no ID)')+'  \u00b7  CH '+fmtCh(o.c),w=g.measureText(t).width+16;
+      let bx=sx+18,by=sy-36;if(bx+w>W-48)bx=sx-18-w;if(by<4)by=sy+16;
+      g.fillRect(bx,by,w,22);g.fillStyle='#fff';g.fillText(t,bx+8,by+15);g.restore();
+    }
+  }
+  g.fillStyle=ink;g.font='bold 12px system-ui,sans-serif';
+  g.fillText('Start',X(P[0][0])+6,Y(P[0][1])+14);
+  const q=P[P.length-1];g.fillText('End',X(q[0])+6,Y(q[1])+14);
+  $('dirTxt').textContent='Direction: Start \u2192 End as shown by the arrows'+($('rev').checked?' (reversed from the DXF)':' (as drawn in the DXF)');
+}
+
+/* ---------- Shapefile export ---------- */
+function crc32(u8){let crc=-1;for(let i=0;i<u8.length;i++){crc^=u8[i];for(let k=0;k<8;k++)crc=(crc>>>1)^(0xEDB88320&-(crc&1))}return(crc^-1)>>>0}
+function makeZip(files){
+  const enc=new TextEncoder(),parts=[],cen=[];let off=0;
+  for(const f of files){
+    const n=enc.encode(f.name),crc=crc32(f.data),sz=f.data.length;
+    const lh=new DataView(new ArrayBuffer(30));
+    lh.setUint32(0,0x04034b50,true);lh.setUint16(4,20,true);lh.setUint16(12,0x21,true);
+    lh.setUint32(14,crc,true);lh.setUint32(18,sz,true);lh.setUint32(22,sz,true);lh.setUint16(26,n.length,true);
+    parts.push(new Uint8Array(lh.buffer),n,f.data);
+    const ch=new DataView(new ArrayBuffer(46));
+    ch.setUint32(0,0x02014b50,true);ch.setUint16(4,20,true);ch.setUint16(6,20,true);ch.setUint16(14,0x21,true);
+    ch.setUint32(16,crc,true);ch.setUint32(20,sz,true);ch.setUint32(24,sz,true);ch.setUint16(28,n.length,true);ch.setUint32(42,off,true);
+    cen.push(new Uint8Array(ch.buffer),n);
+    off+=30+n.length+sz;
+  }
+  let cs=0;cen.forEach(p=>cs+=p.length);
+  const e=new DataView(new ArrayBuffer(22));
+  e.setUint32(0,0x06054b50,true);e.setUint16(8,files.length,true);e.setUint16(10,files.length,true);e.setUint32(12,cs,true);e.setUint32(16,off,true);
+  return new Blob([...parts,...cen,new Uint8Array(e.buffer)],{type:'application/zip'});
+}
+function buildDBF(head,body){
+  const enc=new TextEncoder(),used=new Set(),F=[];
+  head.forEach((h,j)=>{
+    let nm=String(h).replace(/[^A-Za-z0-9_]+/g,'_').replace(/^_+|_+$/g,'').slice(0,10)||('F'+(j+1));
+    const b=nm;let i=1;
+    while(used.has(nm.toUpperCase())){const s=String(i++);nm=b.slice(0,10-s.length)+s}
+    used.add(nm.toUpperCase());
+    const vals=body.map(r=>String(r[j]??'').trim());
+    const isNum=vals.some(v=>v!=='')&&vals.every(v=>v===''||(/^-?\d+(\.\d+)?$/.test(v)&&!/^-?0\d/.test(v)));
+    if(isNum){
+      let dec=0;vals.forEach(v=>{const p=v.split('.')[1];if(p)dec=Math.max(dec,Math.min(p.length,10))});
+      const w=Math.min(20,Math.max(2,...vals.filter(v=>v!=='').map(v=>parseFloat(v).toFixed(dec).length)));
+      F.push({nm,type:'N',w,dec,vals});
+    }else{
+      const bytes=vals.map(v=>enc.encode(String(v)));
+      const raw=body.map(r=>enc.encode(String(r[j]??'')));
+      F.push({nm,type:'C',w:Math.min(254,Math.max(1,...raw.map(x=>x.length))),dec:0,raw});
+    }
+  });
+  const n=body.length,hl=33+32*F.length,rl=1+F.reduce((s,f)=>s+f.w,0);
+  const u=new Uint8Array(hl+rl*n+1),dv=new DataView(u.buffer),d=new Date();
+  u[0]=3;u[1]=d.getFullYear()-1900;u[2]=d.getMonth()+1;u[3]=d.getDate();
+  dv.setUint32(4,n,true);dv.setUint16(8,hl,true);dv.setUint16(10,rl,true);
+  F.forEach((f,i)=>{
+    const o=32+32*i;u.set(enc.encode(f.nm),o);u[o+11]=f.type.charCodeAt(0);u[o+16]=f.w;u[o+17]=f.dec;
+  });
+  u[hl-1]=0x0D;
+  for(let r=0;r<n;r++){
+    let o=hl+r*rl;u[o++]=0x20;
+    for(const f of F){
+      u.fill(0x20,o,o+f.w);
+      if(f.type==='N'){const v=f.vals[r];if(v!=='')u.set(enc.encode(parseFloat(v).toFixed(f.dec).padStart(f.w)),o)}
+      else u.set(f.raw[r].slice(0,f.w),o);
+      o+=f.w;
+    }
+  }
+  u[u.length-1]=0x1A;
+  return u;
+}
+function buildSHP(pts,useZ){
+  const n=pts.length,cl=useZ?36:20,rl=8+cl,fl=100+rl*n,xl=100+8*n,type=useZ?11:1;
+  const S=new DataView(new ArrayBuffer(fl)),X=new DataView(new ArrayBuffer(xl));
+  const zs=pts.map(p=>isFinite(p[2])?p[2]:0);
+  const bb=[Math.min(...pts.map(p=>p[0])),Math.min(...pts.map(p=>p[1])),Math.max(...pts.map(p=>p[0])),Math.max(...pts.map(p=>p[1])),useZ?Math.min(...zs):0,useZ?Math.max(...zs):0,0,0];
+  for(const v of [S,X]){
+    v.setInt32(0,9994);v.setInt32(24,(v===S?fl:xl)/2);v.setInt32(28,1000,true);v.setInt32(32,type,true);
+    bb.forEach((b,i)=>v.setFloat64(36+8*i,b,true));
+  }
+  pts.forEach((p,i)=>{
+    const o=100+i*rl;
+    S.setInt32(o,i+1);S.setInt32(o+4,cl/2);S.setInt32(o+8,type,true);
+    S.setFloat64(o+12,p[0],true);S.setFloat64(o+20,p[1],true);
+    if(useZ){S.setFloat64(o+28,zs[i],true);S.setFloat64(o+36,-1e39,true)}
+    X.setInt32(100+8*i,o/2);X.setInt32(104+8*i,cl/2);
+  });
+  return [new Uint8Array(S.buffer),new Uint8Array(X.buffer)];
+}
+function prjText(){
+  const v=$('crs').value;if(!v)return '';
+  if(v==='custom')return $('wkt').value.trim();
+  const cm={39:51,40:57,41:63}[v];
+  return 'PROJCS["WGS_1984_UTM_Zone_'+v+'N",GEOGCS["GCS_WGS_1984",DATUM["D_WGS_1984",SPHEROID["WGS_1984",6378137.0,298.257223563]],PRIMEM["Greenwich",0.0],UNIT["Degree",0.0174532925199433]],PROJECTION["Transverse_Mercator"],PARAMETER["False_Easting",500000.0],PARAMETER["False_Northing",0.0],PARAMETER["Central_Meridian",'+cm+'.0],PARAMETER["Scale_Factor",0.9996],PARAMETER["Latitude_Of_Origin",0.0],UNIT["Meter",1.0]]';
+}
+$('crs').onchange=()=>$('wktBox').classList.toggle('hide',$('crs').value!=='custom');
+$('shp').onclick=async()=>{
+  const m=$('dlMsg');
+  try{
+    const d=await getDownloads();
+    if(!d){m.textContent='Download is unavailable here.';return}
+    const base='Points_Pipeline_Order',enc=new TextEncoder();
+    const useZ=$('useZ').checked&&+$('cZ').value>=0;
+    const [shp,shx]=buildSHP(out.pts,useZ);
+    const files=[{name:base+'.shp',data:shp},{name:base+'.shx',data:shx},{name:base+'.dbf',data:buildDBF(out.head,out.body)},{name:base+'.cpg',data:enc.encode('UTF-8')}];
+    const prj=prjText();if(prj)files.push({name:base+'.prj',data:enc.encode(prj)});
+    await d.save({filename:base+'_shp.zip',data:makeZip(files)});
+    m.textContent='Shapefile saved'+(prj?'.':' (no .prj; assign the CRS in your GIS).');
+  }catch(e){m.textContent=(e&&e.code==='declined')?'Save cancelled.':'Could not save the shapefile.'}
+};
+
+$('revBtn').onclick=()=>{swapSE();$('rev').checked=!$('rev').checked;run()};
+
+/* ---------- Route points ---------- */
+let rp=null,merged=false;
+function routePoints(){
+  const e=ents[+$('ent').value];if(!e)return;
+  const P=e.p.slice();if($('rev').checked)P.reverse();
+  const m=$('ptSum'),step=parseFloat($('step').value);
+  if(!(step>0)){m.className='msg err';m.textContent='Enter an interval greater than 0.';rp=null;return}
+  const cum=[0];for(let i=1;i<P.length;i++)cum.push(cum[i-1]+Math.hypot(P[i][0]-P[i-1][0],P[i][1]-P[i-1][1]));
+  const L=cum[cum.length-1],n=Math.floor(L/step+1e-9);
+  if(n>200000){m.className='msg err';m.textContent='That would create over 200,000 points; use a larger interval.';rp=null;return}
+  const ch=[];for(let k=0;k<=n;k++)ch.push(k*step);
+  if($('endPt').checked&&L-n*step>1e-6)ch.push(L);
+  let s=0;
+  const at=d=>{while(s<P.length-2&&cum[s+1]<d)s++;const l=cum[s+1]-cum[s],t=l?(d-cum[s])/l:0;return[P[s][0]+t*(P[s+1][0]-P[s][0]),P[s][1]+t*(P[s+1][1]-P[s][1])]};
+  const pts=[],body=[];
+  ch.forEach((d,i)=>{const q=at(d);pts.push([q[0],q[1],NaN]);body.push([i+1,fmtCh(d),q[0].toFixed(3),q[1].toFixed(3)])});
+  rp={head:['Seq','HORIZONTAL CHAINAGE','Easting','Northing'],body,pts,ch};
+  m.className='msg ok';
+  m.textContent=body.length+' points every '+step+' m along '+L.toFixed(1)+' m of pipeline. Point 1 (Start) is at E '+body[0][2]+', N '+body[0][3]+'.';
+  $('rpTb').innerHTML='<thead><tr>'+rp.head.map(h=>'<th>'+h+'</th>').join('')+'</tr></thead><tbody>'+body.slice(0,200).map(r=>'<tr>'+r.map(v=>'<td>'+v+'</td>').join('')+'</tr>').join('')+'</tbody>';
+  draw(P,pts.map(p=>({x:p[0],y:p[1],off:0})),'cv2');
+}
+['step','endPt'].forEach(id=>{$(id).oninput=run;$(id).onchange=run});
+$('rpRev').onclick=()=>{swapSE();$('rev').checked=!$('rev').checked;run()};
+$('rpMerge').onclick=()=>{
+  const m=$('rpMsg');
+  if(!merged){
+    if(!rows.length){m.textContent='Load Points.csv first, then merge.';return}
+    if(!rp){m.textContent='No route points to merge.';return}
+    merged=true;
+  }else merged=false;
+  $('rpMerge').textContent=merged?'Undo merge':'Merge into Points';
+  run();
+  m.textContent=merged?rp.pts.length+' route points added to the sorted Points list below.':'Merge undone.';
+  if(merged)$('res').scrollIntoView({behavior:'smooth'});
+};
+/* ---------- Intersection points ---------- */
+let intOn=false,intPts=[];
+function segInt(a,b,c,d){
+  const rx=b[0]-a[0],ry=b[1]-a[1],sx=d[0]-c[0],sy=d[1]-c[1],den=rx*sy-ry*sx;
+  if(Math.abs(den)<1e-12)return null;
+  const qx=c[0]-a[0],qy=c[1]-a[1],t=(qx*sy-qy*sx)/den,u=(qx*ry-qy*rx)/den,e=1e-9;
+  if(t<-e||t>1+e||u<-e||u>1+e)return null;
+  return [t,u,a[0]+t*rx,a[1]+t*ry];
+}
+function distPt(p,P){
+  let m=Infinity;
+  for(let i=0;i<P.length-1;i++){
+    const dx=P[i+1][0]-P[i][0],dy=P[i+1][1]-P[i][1],L2=dx*dx+dy*dy;
+    const t=L2?Math.max(0,Math.min(1,((p[0]-P[i][0])*dx+(p[1]-P[i][1])*dy)/L2)):0;
+    m=Math.min(m,Math.hypot(p[0]-P[i][0]-t*dx,p[1]-P[i][1]-t*dy));
+  }
+  return m;
+}
+function findInt(P,cum,sel){
+  const res=[],seen=new Set(),pad=0.01;
+  const bx0=Math.min(...P.map(p=>p[0]))-pad,bx1=Math.max(...P.map(p=>p[0]))+pad,by0=Math.min(...P.map(p=>p[1]))-pad,by1=Math.max(...P.map(p=>p[1]))+pad;
+  ents.forEach((e,ei)=>{
+    if(ei===sel||e.chain)return;
+    const ex=e.p.map(q=>q[0]),ey=e.p.map(q=>q[1]);
+    if(Math.max(...ex)<bx0||Math.min(...ex)>bx1||Math.max(...ey)<by0||Math.min(...ey)>by1)return;
+    if(e.p.every(q=>distPt(q,P)<0.01))return;
+    for(let j=0;j<e.p.length-1;j++){
+      const c=e.p[j],d=e.p[j+1];
+      for(let i=0;i<P.length-1;i++){
+        const h=segInt(P[i],P[i+1],c,d);if(!h)continue;
+        const key=ei+':'+h[2].toFixed(3)+','+h[3].toFixed(3);
+        if(seen.has(key))continue;seen.add(key);
+        res.push({x:h[2],y:h[3],c:cum[i]+h[0]*(cum[i+1]-cum[i]),layer:e.layer});
+      }
+    }
+  });
+  res.sort((a,b)=>a.c-b.c);
+  return res;
+}
+function computeInt(){
+  if(!intOn){intPts=[];return}
+  const sel=+$('ent').value,e=ents[sel];if(!e){intPts=[];return}
+  const P=e.p.slice();if($('rev').checked)P.reverse();
+  const cum=[0];for(let i=1;i<P.length;i++)cum.push(cum[i-1]+Math.hypot(P[i][0]-P[i-1][0],P[i][1]-P[i-1][1]));
+  intPts=findInt(P,cum,sel);
+  const RULES=[['EDGE OF WADI',/EDGEOF(THE)?WADI/],['ASPHALT ROAD',/ASPHALT/],['TRACK ROAD',/TRACK/],['GRADED ROAD',/GRADED/],['ROW',/RIGHTOFWAY|^(PIPELINE)?ROW$/]];
+  const cnt={};
+  intPts.forEach(q=>{
+    q.name=q.layer;
+    const n=q.layer.toUpperCase().replace(/[^A-Z0-9]/g,'');
+    const rule=RULES.find(r=>r[1].test(n));
+    if(rule){cnt[rule[0]]=(cnt[rule[0]]||0)+1;q.name=(cnt[rule[0]]%2?'START ':'END ')+rule[0]}
+  });
+}
+function intDxfText(){
+  const Ls=[...new Set(intPts.map(q=>q.layer))],o=['0','SECTION','2','HEADER','9','$ACADVER','1','AC1009','0','ENDSEC','0','SECTION','2','TABLES','0','TABLE','2','LTYPE','70','1','0','LTYPE','2','CONTINUOUS','70','0','3','Solid line','72','65','73','0','40','0.0','0','ENDTAB','0','TABLE','2','LAYER','70',String(Ls.length)];
+  Ls.forEach(n=>o.push('0','LAYER','2',n,'70','0','62','7','6','CONTINUOUS'));
+  o.push('0','ENDTAB','0','ENDSEC','0','SECTION','2','ENTITIES');
+  intPts.forEach(q=>o.push('0','POINT','8',q.layer,'10',q.x.toFixed(3),'20',q.y.toFixed(3),'30','0'));
+  o.push('0','ENDSEC','0','EOF');
+  return o.join('\r\n')+'\r\n';
+}
+$('intBtn').onclick=()=>{
+  intOn=!intOn;
+  $('intBtn').textContent=intOn?'Remove Intersection Points':'Add Intersection Points';
+  run();
+  const m=$('dlMsg');
+  $('intDxf').classList.toggle('hide',!(intOn&&intPts.length));
+  if(!intOn){m.textContent='Intersection points removed.';return}
+  if(!intPts.length){m.textContent='No other layers intersect the selected route. Check the pipeline entity in the dropdown.';return}
+  const cnt={};intPts.forEach(q=>cnt[q.layer]=(cnt[q.layer]||0)+1);
+  m.textContent=intPts.length+' intersection points added: '+Object.entries(cnt).map(([k,v])=>k+' ('+v+')').join(', ')+'.';
+};
+$('intDxf').onclick=async()=>{
+  const m=$('dlMsg');
+  try{
+    const d=await getDownloads();
+    if(!d){m.textContent='Download is unavailable here.';return}
+    await d.save({filename:'Intersection_Points_dxf.zip',data:makeZip([{name:'Intersection_Points.dxf',data:new TextEncoder().encode(intDxfText())}])});
+    m.textContent='DXF saved inside the zip.';
+  }catch(e){m.textContent=(e&&e.code==='declined')?'Save cancelled.':'Could not save the DXF.'}
+};
+
+let kmOn=false;
+$('kmBtn').onclick=()=>{
+  kmOn=!kmOn;
+  $('kmBtn').textContent=kmOn?'Remove KM points':'Add KM points (every 1000 m)';
+  run();
+  const n=Math.floor(ents[+$('ent').value].len/1000+1e-9);
+  $('dlMsg').textContent=!kmOn?'KM points removed.':(n?n+' KM point'+(n>1?'s':'')+' added (KM-01 at 1000 m from Start).':'Pipeline is shorter than 1000 m; no KM points created.');
+};
+function rpName(){return 'Route_Points_'+String(parseFloat($('step').value)).replace('.','p')+'m'}
+$('rpCsv').onclick=async()=>{
+  const m=$('rpMsg');if(!rp){m.textContent='Nothing to export.';return}
+  try{
+    const d=await getDownloads();
+    if(!d){m.textContent='Download is unavailable here.';return}
+    await d.save({filename:rpName()+'.csv',data:[rp.head,...rp.body].map(r=>r.map(esc).join(',')).join('\r\n')+'\r\n'});
+    m.textContent='Saved.';
+  }catch(e){m.textContent=(e&&e.code==='declined')?'Save cancelled.':'Could not save.'}
+};
+$('rpShp').onclick=async()=>{
+  const m=$('rpMsg');if(!rp){m.textContent='Nothing to export.';return}
+  try{
+    const d=await getDownloads();
+    if(!d){m.textContent='Download is unavailable here.';return}
+    const base=rpName(),enc=new TextEncoder(),[shp,shx]=buildSHP(rp.pts,false);
+    const files=[{name:base+'.shp',data:shp},{name:base+'.shx',data:shx},{name:base+'.dbf',data:buildDBF(rp.head,rp.body)},{name:base+'.cpg',data:enc.encode('UTF-8')}];
+    const prj=prjText();if(prj)files.push({name:base+'.prj',data:enc.encode(prj)});
+    await d.save({filename:base+'_shp.zip',data:makeZip(files)});
+    m.textContent='Shapefile saved'+(prj?'.':' (no .prj; assign the CRS in your GIS).');
+  }catch(e){m.textContent=(e&&e.code==='declined')?'Save cancelled.':'Could not save the shapefile.'}
+};
+
+function csvText(){return [out.head,...out.body].map(r=>r.map(esc).join(',')).join('\r\n')+'\r\n'}
+$('dl').onclick=async()=>{
+  const m=$('dlMsg');
+  try{
+    const d=await getDownloads();
+    if(!d){m.textContent='Download is unavailable here; use Copy CSV instead.';return}
+    await d.save({filename:'Points_Pipeline_Order.csv',data:csvText()});
+    m.textContent='Saved.';
+  }catch(e){m.textContent=(e&&e.code==='declined')?'Save cancelled.':'Could not save; use Copy CSV instead.'}
+};
+$('cp').onclick=async()=>{
+  try{await navigator.clipboard.writeText(csvText());$('dlMsg').textContent='Copied to clipboard.'}
+  catch(e){$('dlMsg').textContent='Copy blocked by the browser.'}
+};
+</script>
+</body>
+</html>
